@@ -2,20 +2,9 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_precision_loss)]
 use std::io::Write;
-use std::ops::Deref;
 
+use crate::pixel::{Color, Pixel};
 use crate::vecs::Vec2;
-
-#[derive(Clone, Debug, Default, PartialEq, Copy)]
-pub struct Pixel(f32);
-
-impl Deref for Pixel {
-    type Target = f32;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Screen {
@@ -40,9 +29,9 @@ impl Screen {
     fn add_pixel(&mut self, xy: Vec2<usize>, pixel: Pixel) {
         let idx = self.get_arr_idx(xy);
         if let Some(px) = self.pixels.get_mut(idx) {
-            let curr_val: f32 = **px;
-            let new_val = (curr_val + *pixel).clamp(0.0, 1.0);
-            *px = new_val.into();
+            let curr_pix: Pixel = *px;
+            let new_pix = curr_pix + pixel;
+            *px = new_pix;
         }
     }
 
@@ -51,11 +40,12 @@ impl Screen {
         std::io::stdout().flush().unwrap();
         for y in 0..self.height {
             for x in 0..self.width {
-                let idx = y * self.width + x;
                 if y == 0 || y == self.height - 1 || x == 0 || x == self.width - 1 {
                     print!("█");
                 } else {
-                    print!("{}", self.pixels[idx]);
+                    let idx = y * self.width + x;
+                    let px = self.pixels[idx];
+                    print!("{}", px);
                 }
             }
             println!();
@@ -79,10 +69,15 @@ impl Screen {
         y * self.width + x
     }
 
-    pub fn draw_line(&mut self, brightness: impl Into<Pixel>, start: Vec2<f32>, end: Vec2<f32>) {
+    pub fn draw_dot(&mut self, pixel: Pixel, pos: Vec2<f32>) {
+        let xy = self.project(pos);
+        self.add_pixel(xy, pixel);
+    }
+
+    pub fn draw_line(&mut self, pixel: impl Into<Pixel>, start: Vec2<f32>, end: Vec2<f32>) {
         let start = self.project(start);
         let end = self.project(end);
-        let brightness = brightness.into();
+        let pixel: Pixel = pixel.into();
 
         for x in start.x.min(end.x)..=start.x.max(end.x) {
             for y in start.y.min(end.y)..=start.y.max(end.y) {
@@ -112,30 +107,15 @@ impl Screen {
                 let dist = (px - cx).powf(2.0) + (py - cy).powf(2.0);
 
                 if dist <= 0.5 {
-                    let brightness = (1.0 - (dist * 2.0)).clamp(0.0, *brightness);
+                    let alpha = (1.0 - (dist * 2.0)).clamp(0.0, *pixel);
+                    let pix = Pixel {
+                        color: pixel.color,
+                        alpha,
+                    };
 
-                    self.add_pixel((x, y).into(), brightness.into());
+                    self.add_pixel((x, y).into(), pix);
                 }
             }
         }
-    }
-}
-
-impl From<f32> for Pixel {
-    fn from(value: f32) -> Self {
-        Self(value.clamp(0.0, 1.0))
-    }
-}
-
-impl std::fmt::Display for Pixel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let cs: &[char] = &[' ', '░', '▒', '▓', '█'];
-        // let cs: &[char] = &[' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
-        let c = match **self {
-            ..0.0 => cs[0],
-            1.0.. => cs[cs.len() - 1],
-            v => cs[((v * (cs.len() as f32 - 1.0)).round() as usize).clamp(0, cs.len())],
-        };
-        write!(f, "{c}")
     }
 }

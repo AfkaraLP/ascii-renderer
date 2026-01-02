@@ -1,3 +1,4 @@
+use crate::pixel::{Color, Pixel};
 use crate::screen::Screen;
 use crate::vecs::{Vec2, Vec3};
 use std::thread;
@@ -5,6 +6,7 @@ use std::time::Duration;
 
 const FPS: u64 = 60;
 
+mod pixel;
 mod screen;
 mod vecs;
 
@@ -45,7 +47,9 @@ fn main() {
                 let first = project(first);
                 let second = project(second);
 
-                screen.draw_line(1.0, first, second);
+                let col = Color::from_hsv((it * 10.0) % 360.0, 0.7, 0.8);
+
+                screen.draw_line(col, first, second);
             }
         }
         screen.render();
