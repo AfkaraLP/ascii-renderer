@@ -22,10 +22,12 @@ impl Screen {
         }
     }
 
+    #[inline]
     pub fn clear_context(&mut self) {
         self.pixels = vec![Pixel::default(); self.width * self.height];
     }
 
+    #[inline]
     fn add_pixel(&mut self, xy: Vec2<usize>, pixel: Pixel) {
         let idx = self.get_arr_idx(xy);
         if let Some(px) = self.pixels.get_mut(idx) {
@@ -33,6 +35,12 @@ impl Screen {
             let new_pix = curr_pix + pixel;
             *px = new_pix;
         }
+    }
+
+    #[inline]
+    fn get_pixel(&self, xy: Vec2<usize>) -> &Pixel {
+        let idx = self.get_arr_idx(xy);
+        &self.pixels[idx]
     }
 
     pub fn render(&self) {
@@ -43,8 +51,7 @@ impl Screen {
                 if y == 0 || y == self.height - 1 || x == 0 || x == self.width - 1 {
                     print!("█");
                 } else {
-                    let idx = y * self.width + x;
-                    let px = self.pixels[idx];
+                    let px = self.get_pixel((x, y).into());
                     print!("{}", px);
                 }
             }
@@ -65,6 +72,7 @@ impl Screen {
         (x, y).into()
     }
 
+    #[inline]
     fn get_arr_idx(&self, Vec2 { x, y }: Vec2<usize>) -> usize {
         y * self.width + x
     }
