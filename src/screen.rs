@@ -3,7 +3,7 @@
 #![allow(clippy::cast_precision_loss)]
 use std::io::Write;
 
-use crate::pixel::{Color, Pixel};
+use crate::pixel::Pixel;
 use crate::vecs::Vec2;
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -52,7 +52,7 @@ impl Screen {
                     print!("█");
                 } else {
                     let px = self.get_pixel((x, y).into());
-                    print!("{}", px);
+                    print!("{px}");
                 }
             }
             println!();
@@ -77,11 +77,13 @@ impl Screen {
         y * self.width + x
     }
 
+    #[allow(unused)]
     pub fn draw_dot(&mut self, pixel: Pixel, pos: Vec2<f32>) {
         let xy = self.project(pos);
         self.add_pixel(xy, pixel);
     }
 
+    #[allow(unused)]
     pub fn draw_line(&mut self, pixel: impl Into<Pixel>, start: Vec2<f32>, end: Vec2<f32>) {
         let start = self.project(start);
         let end = self.project(end);

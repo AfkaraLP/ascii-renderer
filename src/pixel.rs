@@ -1,3 +1,6 @@
+#![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_sign_loss)]
 use std::ops::Add;
 use std::ops::Deref;
 
@@ -7,7 +10,7 @@ pub struct Pixel {
     pub alpha: f32,
 }
 
-#[derive(Clone, Debug, PartialEq, Copy)]
+#[derive(Clone, Debug, PartialEq, Copy, Default)]
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -15,38 +18,35 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn from_hsv(h: impl Into<f32>, s: f32, v: f32) -> Self {
-        let h = h.into().clamp(0.0, 360.0) / 60.0;
-        let s = s.clamp(0.0, 1.0);
-        let v = v.clamp(0.0, 1.0);
+    pub fn from_hsv(hue: impl Into<f32>, saturation: f32, value: f32) -> Self {
+        let hue_degrees = hue.into().clamp(0.0, 360.0);
+        let hue_sector = hue_degrees / 60.0;
 
-        let i = h.floor() as u32;
-        let f = h - h.floor();
-        let p = v * (1.0 - s);
-        let q = v * (1.0 - f * s);
-        let t = v * (1.0 - (1.0 - f) * s);
+        let saturation = saturation.clamp(0.0, 1.0);
+        let value = value.clamp(0.0, 1.0);
 
-        let (r, g, b) = match i % 6 {
-            0 => (v, t, p),
-            1 => (q, v, p),
-            2 => (p, v, t),
-            3 => (p, q, v),
-            4 => (t, p, v),
-            5 => (v, p, q),
+        let sector_index = hue_sector.floor() as u32;
+        let sector_fraction = hue_sector - hue_sector.floor();
+
+        let chroma_min = value * (1.0 - saturation);
+        let chroma_q = value * (1.0 - sector_fraction * saturation);
+        let chroma_t = value * (1.0 - (1.0 - sector_fraction) * saturation);
+
+        let (red, green, blue) = match sector_index % 6 {
+            0 => (value, chroma_t, chroma_min),
+            1 => (chroma_q, value, chroma_min),
+            2 => (chroma_min, value, chroma_t),
+            3 => (chroma_min, chroma_q, value),
+            4 => (chroma_t, chroma_min, value),
+            5 => (value, chroma_min, chroma_q),
             _ => unreachable!(),
         };
 
         Self {
-            r: (r * 255.0).round() as u8,
-            g: (g * 255.0).round() as u8,
-            b: (b * 255.0).round() as u8,
+            r: (red * 255.0).round() as u8,
+            g: (green * 255.0).round() as u8,
+            b: (blue * 255.0).round() as u8,
         }
-    }
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Self { r: 0, g: 0, b: 0 }
     }
 }
 
@@ -91,17 +91,20 @@ impl Add for Pixel {
 }
 
 impl std::fmt::Display for Pixel {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let cs: &[char] = &[' ', '░', '▒', '▓', '█'];
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let characters: &[char] = &[' ', '░', '▒', '▓', '█'];
         // let cs: &[char] = &[' ', '.', ':', '-', '=', '+', '*', '#', '%', '@'];
-        let c = match self.alpha {
-            ..0.0 => cs[0],
-            1.0.. => cs[cs.len() - 1],
-            v => cs[((v * (cs.len() as f32 - 1.0)).round() as usize).clamp(0, cs.len())],
+        let character = match self.alpha {
+            ..0.0 => characters[0],
+            1.0.. => characters[characters.len() - 1],
+            v => {
+                characters[((v * (characters.len() as f32 - 1.0)).round() as usize)
+                    .clamp(0, characters.len())]
+            }
         };
-        let r = self.color.r;
-        let g = self.color.g;
-        let b = self.color.b;
-        write!(f, "\u{1b}[38;2;{};{};{}m{}\u{1b}[0m", r, g, b, c)
+        let red = self.color.r;
+        let green = self.color.g;
+        let blue = self.color.b;
+        write!(f, "\u{1b}[38;2;{red};{green};{blue}m{character}\u{1b}[0m")
     }
 }

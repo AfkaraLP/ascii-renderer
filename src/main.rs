@@ -1,4 +1,4 @@
-use crate::pixel::{Color, Pixel};
+use crate::pixel::Color;
 use crate::screen::Screen;
 use crate::vecs::{Vec2, Vec3};
 use std::thread;
