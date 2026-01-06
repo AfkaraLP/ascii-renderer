@@ -23,9 +23,9 @@ const CUBE: [Vec3<f32>; 8] = [
 ];
 
 const FACES: &[&[usize]] = &[
-    &[0, 1, 2, 3],
+    &[0, 1, 2, 3, 0],
     //
-    &[4, 5, 6, 7],
+    &[4, 5, 6, 7, 4],
     &[0, 4],
     &[1, 5],
     &[2, 6],
@@ -38,18 +38,21 @@ fn main() {
     loop {
         for face in FACES {
             for idx in 0..face.len() {
-                let first = CUBE[face[idx]];
-                let second = CUBE[face[(idx + 1) % face.len()]];
+                let second_idx = face.get(idx + 1);
+                if let Some(second_idx) = second_idx {
+                    let first = CUBE[face[idx]];
+                    let second = CUBE[*second_idx];
 
-                let first = translate_z(rotate_xz(first, it), 1.5);
-                let second = translate_z(rotate_xz(second, it), 1.5);
+                    let first = translate_z(rotate_xz(first, it), 1.5);
+                    let second = translate_z(rotate_xz(second, it), 1.5);
 
-                let first = project(first);
-                let second = project(second);
+                    let first = project(first);
+                    let second = project(second);
 
-                let col = Color::from_hsv((it * 10.0) % 360.0, 0.7, 0.8);
+                    let col = Color::from_hsv((it * 10.0) % 360.0, 0.7, 0.8);
 
-                screen.draw_line(col, first, second);
+                    screen.draw_line(col, first, second);
+                }
             }
         }
         screen.render();
